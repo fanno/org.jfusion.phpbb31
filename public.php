@@ -292,6 +292,7 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 	         */
 	        global $SID, $_SID, $_EXTRA_URL;
 	        global $request, $phpbb_container;
+	        global $symfony_request, $phpbb_filesystem;
             if ($jfile == 'mcp.php') {
                 //must globalize these to make sure urls are generated correctly via extra_url() in mcp.php
                 global $forum_id, $topic_id, $post_id, $report_id, $user_id, $action;
