@@ -286,6 +286,12 @@ class JFusionPublic_phpbb31 extends JFusionPublic
             chdir($source_path);
             /* set scope for variables required later */
             global $phpbb_root_path, $phpEx, $db, $config, $user, $auth, $cache, $template, $phpbb_hook, $module, $mode, $table_prefix, $id_cache, $sort_dir;
+
+	        /**
+	         * changed for phpbb31
+	         */
+	        global $SID, $_SID, $_EXTRA_URL;
+	        global $request, $phpbb_container;
             if ($jfile == 'mcp.php') {
                 //must globalize these to make sure urls are generated correctly via extra_url() in mcp.php
                 global $forum_id, $topic_id, $post_id, $report_id, $user_id, $action;
