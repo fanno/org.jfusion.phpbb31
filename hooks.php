@@ -135,8 +135,12 @@ class JFusionHook {
      * @param $hook
      */
     public static function phpbb_user_session_handler($hook) {
+	    /**
+	     * @var $request \phpbb\request\request
+	     * @var $user \phpbb\user
+	     */
         //we need to change the $user->page array as it does not detect some POST values
-        global $user;
+        global $user, $request;
         //set our current phpBB3 filename
 	    $mainframe = JFusionFactory::getApplication();
 
@@ -146,13 +150,19 @@ class JFusionHook {
         }
         $user->page['page_name'] = $jfile;
         //parse our GET variables
-        $get_vars = $_GET;
-        //Some params where changed to POST therefore we need to include some of those
+
+	    $list = $request->variable_names(\phpbb\request\request_interface::GET);
+
+	    $get_vars = array();
+	    foreach ($list as $var) {
+		    $get_vars[$var] = $request->variable($var, null, false, \phpbb\request\request_interface::GET);
+	    }
+
+	    //Some params where changed to POST therefore we need to include some of those
         $post_include = array('i', 'mode');
-        $post_vars = $_POST;
         foreach ($post_include as $value) {
-            if (!empty($post_vars[$value]) && empty($get_vars[$value])) {
-                $get_vars[$value] = $post_vars[$value];
+			if ($request->is_set_post($value) && empty($get_vars[$value])) {
+	            $get_vars[$value] = $request->variable($value, null, false, \phpbb\request\request_interface::POST);
             }
         }
         //unset Joomla vars
