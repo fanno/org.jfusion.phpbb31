@@ -308,13 +308,15 @@ class JFusionPublic_phpbb31 extends JFusionPublic
                 define('PHPBB_DB_NEW_LINK', 1);
             }
 
+
+	        $php_self = $_SERVER['PHP_SELF'];
+
             //define the phpBB3 hooks
             require_once JFUSION_PLUGIN_PATH . DIRECTORY_SEPARATOR . $this->getJname() . DIRECTORY_SEPARATOR . 'hooks.php';
             // Get the output
             ob_start();
 
             //we need to hijack $_SERVER['PHP_SELF'] so that phpBB correctly utilizes it such as correctly noted the page a user is browsing
-            $php_self = $_SERVER['PHP_SELF'];
             $juri = new JURI($source_url);
             $_SERVER['PHP_SELF'] = $juri->getPath() . $jfile;
 
@@ -334,6 +336,9 @@ class JFusionPublic_phpbb31 extends JFusionPublic
                 ob_end_clean();
             }
 
+	        if ($request) {
+		        $request->enable_super_globals();
+	        }
             //restore $_SERVER['PHP_SELF']
             $_SERVER['PHP_SELF'] = $php_self;
 
