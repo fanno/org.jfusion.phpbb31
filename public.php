@@ -294,6 +294,7 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 	        global $request, $phpbb_container;
 	        global $symfony_request, $phpbb_filesystem;
 	        global $phpbb_dispatcher;
+	        global $phpbb_path_helper;
 
             if ($jfile == 'mcp.php') {
                 //must globalize these to make sure urls are generated correctly via extra_url() in mcp.php
