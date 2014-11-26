@@ -271,101 +271,122 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			//use the default index.php
 			$jfile = 'index.php';
 		}
+		//combine the path and filename
+		if (!is_file($source_path . basename($jfile))) {
+			$jfile = 'app.php';
+		}
+
+
 		//redirect for file download requests
 		if ($jfile == 'file.php') {
 			$url = 'Location: ' . $this->params->get('source_url') . 'download/file.php?' . $_SERVER['QUERY_STRING'];
 			header($url);
 			exit();
 		}
-		//combine the path and filename
-		$index_file = $source_path . basename($jfile);
-		if (!is_file($index_file)) {
-			JFusionFunction::raiseWarning('The path to the requested does not exist', $this->getJname());
+		if ($jfile == 'app.php') {
+			parent::getBuffer($jfdata);
 		} else {
 			//set the current directory to phpBB3
 			chdir($source_path);
 			/* set scope for variables required later */
 			global $phpbb_root_path, $phpEx, $db, $config, $user, $auth, $cache, $template, $phpbb_hook, $module, $mode, $table_prefix, $id_cache, $sort_dir;
 
-			/**
-			 * we want to modify $_SERVER['REQUEST_URI'] if we in app.php
-			 *
-			 * esamble of REQUEST_URI == ..../app.php/demo/world needs to be
-			 * $_SERVER['REQUEST_URI'] = '/demo/world';
-			 */
-//
-			/**
-			 * changed for phpbb31
-			 */
-			global $SID, $_EXTRA_URL;
-			global $request, $phpbb_container;
-			global $symfony_request, $phpbb_filesystem;
-			global $phpbb_dispatcher;
-			global $phpbb_path_helper;
-			global $phpbb_extension_manager;
-			global $phpbb_log;
-			global $starttime;
-			global $phpbb_admin_path;
+			$SERVER = $_SERVER;
 
-			if ($jfile == 'mcp.php') {
-				//must globalize these to make sure urls are generated correctly via extra_url() in mcp.php
-				global $forum_id, $topic_id, $post_id, $report_id, $user_id, $action;
-			} else if ($jfile == 'feed.php') {
-				global $board_url;
+			$fullURI = new JURI($jfdata->fullURL);
+
+			$_SERVER['REQUEST_URI'] = $fullURI->toString(array('path', 'query', 'fragment'));
+			$baseURI = new JURI($jfdata->baseURL);
+			$paths = explode('/', $baseURI->getPath());
+			foreach ($paths as $path) {
+				if (!empty($path)) {
+					if (strpos($_SERVER['REQUEST_URI'], '/' . $path) === 0) {
+						$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], strlen('/' . $path));
+					}
+				}
 			}
+			$integratedURI = new JURI($this->data->integratedURL);
+			$_SERVER['REQUEST_URI'] = $integratedURI->getPath() . ltrim($_SERVER['REQUEST_URI'], '/');
 
-			//see if we need to force the database to use a new connection
-			if ($this->params->get('database_new_link', 0) && !defined('PHPBB_DB_NEW_LINK')) {
-				define('PHPBB_DB_NEW_LINK', 1);
-			}
+			//combine the path and filename
+			$index_file = $source_path . basename($jfile);
+			if (!is_file($index_file)) {
+				JFusionFunction::raiseWarning('The path to the requested does not exist', $this->getJname());
+			} else {
+				/**
+				 * changed for phpbb31
+				 */
+				global $SID, $_EXTRA_URL;
+				global $request, $phpbb_container;
+				global $symfony_request, $phpbb_filesystem;
+				global $phpbb_dispatcher;
+				global $phpbb_path_helper;
+				global $phpbb_extension_manager;
+				global $phpbb_log;
+				global $starttime;
+				global $phpbb_admin_path;
 
-			$php_self = $_SERVER['PHP_SELF'];
-
-			//define the phpBB3 hooks
-			require_once JFUSION_PLUGIN_PATH . DIRECTORY_SEPARATOR . $this->getJname() . DIRECTORY_SEPARATOR . 'hooks.php';
-			// Get the output
-			ob_start();
-
-			//we need to hijack $_SERVER['PHP_SELF'] so that phpBB correctly utilizes it such as correctly noted the page a user is browsing
-			$juri = new JURI($source_url);
-			$_SERVER['PHP_SELF'] = $juri->getPath() . $jfile;
-
-			try {
-				if (!defined('UTF8_STRLEN')) {
-					define('UTF8_STRLEN', true);
+				if ($jfile == 'mcp.php') {
+					//must globalize these to make sure urls are generated correctly via extra_url() in mcp.php
+					global $forum_id, $topic_id, $post_id, $report_id, $user_id, $action;
+				} else if ($jfile == 'feed.php') {
+					global $board_url;
 				}
-				if (!defined('UTF8_CORE')) {
-					define('UTF8_CORE', true);
+
+				//see if we need to force the database to use a new connection
+				if ($this->params->get('database_new_link', 0) && !defined('PHPBB_DB_NEW_LINK')) {
+					define('PHPBB_DB_NEW_LINK', 1);
 				}
-				if (!defined('UTF8_CASE')) {
-					define('UTF8_CASE', true);
+
+				//define the phpBB3 hooks
+				require_once JFUSION_PLUGIN_PATH . DIRECTORY_SEPARATOR . $this->getJname() . DIRECTORY_SEPARATOR . 'hooks.php';
+				// Get the output
+
+				ob_start();
+
+				//we need to hijack $_SERVER['PHP_SELF'] so that phpBB correctly utilizes it such as correctly noted the page a user is browsing
+				$juri = new JURI($source_url);
+				$_SERVER['SCRIPT_NAME'] = $_SERVER['PHP_SELF'] = $juri->getPath() . $jfile;
+				$_SERVER['SCRIPT_FILENAME'] = $source_path . $jfile;
+
+				try {
+					if (!defined('UTF8_STRLEN')) {
+						define('UTF8_STRLEN', true);
+					}
+					if (!defined('UTF8_CORE')) {
+						define('UTF8_CORE', true);
+					}
+					if (!defined('UTF8_CASE')) {
+						define('UTF8_CASE', true);
+					}
+
+					include_once ($index_file);
+				} catch (Exception $e) {
 				}
-				include_once ($index_file);
-			} catch (Exception $e) {
 				$jfdata->buffer = ob_get_contents();
 				ob_end_clean();
-			}
 
-			if ($request) {
-				$request->enable_super_globals();
-			}
-			//restore $_SERVER['PHP_SELF']
-			$_SERVER['PHP_SELF'] = $php_self;
+				if ($request) {
+					$request->enable_super_globals();
+				}
 
-			//change the current directory back to Joomla.
-			chdir(JPATH_SITE);
-			//show more smileys without the Joomla frame
-			$jfmode = $mainframe->input->get('mode');
-			$jfform = $mainframe->input->get('form');
-			if ($jfmode == 'smilies' || ($jfmode == 'searchuser' && !empty($jfform) || $jfmode == 'contact')) {
-				$pattern = '#<head[^>]*>(.*?)<\/head>.*?<body[^>]*>(.*)<\/body>#si';
-				preg_match($pattern, $jfdata->buffer, $temp);
-				$jfdata->header = $temp[1];
-				$jfdata->body = $temp[2];
-				$this->parseHeader($jfdata);
-				$this->parseBody($jfdata);
-				die('<html><head>' . $jfdata->header . '</head><body>' . $jfdata->body . '</body></html>');
+				//change the current directory back to Joomla.
+				chdir(JPATH_SITE);
+				//show more smileys without the Joomla frame
+				$jfmode = $mainframe->input->get('mode');
+				$jfform = $mainframe->input->get('form');
+				if ($jfmode == 'smilies' || ($jfmode == 'searchuser' && !empty($jfform) || $jfmode == 'contact')) {
+					$pattern = '#<head[^>]*>(.*?)<\/head>.*?<body[^>]*>(.*)<\/body>#si';
+					preg_match($pattern, $jfdata->buffer, $temp);
+					$jfdata->header = $temp[1];
+					$jfdata->body = $temp[2];
+					$this->parseHeader($jfdata);
+					$this->parseBody($jfdata);
+					die('<html><head>' . $jfdata->header . '</head><body>' . $jfdata->body . '</body></html>');
+				}
 			}
+			//restore $_SERVER
+			$_SERVER = $SERVER;
 		}
 	}
 
@@ -489,7 +510,14 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 		$integratedURL = $this->data->integratedURL;
 		$baseURL = $this->data->baseURL;
 
-		if ( strpos($q, './') === 0 ) {
+		$q = str_replace('../', '', $q);
+
+		$integratedURI = new JURI($integratedURL);
+		if ( $q === $integratedURL ) {
+			$q = '';
+		} else if ( strpos($q, $integratedURI->getPath()) === 0 ) {
+			$q = substr($q, strlen($integratedURI->getPath()));
+		} else if ( strpos($q, './') === 0 ) {
 			$q = substr($q, 2);
 		} else if ( strpos($q, $this->data->integratedURL . 'index.php') === 0 ) {
 			$q = substr($q, strlen($this->data->integratedURL . 'index.php'));
@@ -556,7 +584,6 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			//check to see what SEF mode is selected
 			$sefmode = $this->params->get('sefmode');
 			if ($sefmode == 1) {
-
 				//extensive SEF parsing was selected
 				$url = JFusionFunction::routeURL($q, JFusionFactory::getApplication()->input->getInt('Itemid'));
 			} else {
