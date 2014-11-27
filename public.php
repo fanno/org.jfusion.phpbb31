@@ -30,7 +30,6 @@ defined('_JEXEC') or die('Restricted access');
  */
 class JFusionPublic_phpbb31 extends JFusionPublic
 {
-
 	/**
 	 * returns the name of this JFusion plugin
 	 * @return string name of current JFusion plugin
@@ -276,13 +275,12 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			$jfile = 'app.php';
 		}
 
-
 		//redirect for file download requests
 		if ($jfile == 'file.php') {
-			$url = 'Location: ' . $this->params->get('source_url') . 'download/file.php?' . $_SERVER['QUERY_STRING'];
-			header($url);
+			header('Location: ' . $this->params->get('source_url') . 'download/file.php?' . $_SERVER['QUERY_STRING']);
 			exit();
 		}
+
 		if ($jfile == 'app.php') {
 			parent::getBuffer($jfdata);
 		} else {
@@ -342,7 +340,8 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 				require_once JFUSION_PLUGIN_PATH . DIRECTORY_SEPARATOR . $this->getJname() . DIRECTORY_SEPARATOR . 'hooks.php';
 				// Get the output
 
-				ob_start();
+				ob_start(array($this, 'callback'));
+				$h = ob_list_handlers();
 
 				//we need to hijack $_SERVER['PHP_SELF'] so that phpBB correctly utilizes it such as correctly noted the page a user is browsing
 				$juri = new JURI($source_url);
@@ -363,8 +362,12 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 					include_once ($index_file);
 				} catch (Exception $e) {
 				}
-				$jfdata->buffer = ob_get_contents();
-				ob_end_clean();
+
+				while( in_array( get_class($this) . '::callback', $h) ) {
+					$jfdata->buffer .= ob_get_contents();
+					ob_end_clean();
+					$h = ob_list_handlers();
+				}
 
 				if ($request) {
 					$request->enable_super_globals();
@@ -409,12 +412,13 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			$callback_function[] = '';
 
 			//parse URLS
-			$regex_body[] = '#href="(.*?)"#m';
+			$regex_body[] = '#(?<=href=")(.*?)(?=")#m';
 			$replace_body[] = '';
 			$callback_function[] = 'fixUrl';
 
 			//convert relative links from images into absolute links
-			$regex_body[] = '#(src="|background="|url\(\'?)[\.\/]*(.*?)("|\'?\))#mS';
+
+			$regex_body[] = '#(src="|background="|url\(\'?)[\.\/].*?(.*?)("|\'?\))#mS';
 			$replace_body[] = '$1' . $data->integratedURL . '$2$3';
 			$callback_function[] = '';
 			//fix for form actions
@@ -422,7 +426,7 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			$replace_body[] = ''; //$this->fixAction('$1', '$2', "' . $data->baseURL . '")';
 			$callback_function[] = 'fixAction';
 			//convert relative popup links to full url links
-			$regex_body[] = '#popup\(\'[\.\/]*(.*?)\'#mS';
+			$regex_body[] = '#popup\(\'[\.\/].*?(.*?)\'#mS';
 			$replace_body[] = 'popup(\'' . $data->integratedURL . '$1\'';
 			$callback_function[] = '';
 			//fix for mcp links
@@ -528,71 +532,64 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 		//allow for direct downloads and admincp access
 		if (strstr($q, 'download/') || strstr($q, 'adm/')) {
 			$url = $integratedURL . $q;
-			return 'href="' . $url . '"';
-		}
+		} else {
+			//these are custom links that are based on modules and thus no as easy to replace as register and lost password links in the hooks.php file so we'll just parse them
+			$edit_account_url = $this->params->get('edit_account_url');
+			if (strstr($q, 'mode=reg_details') && !empty($edit_account_url)) {
+				$url = $edit_account_url;
+			} else {
+				$edit_profile_url = $this->params->get('edit_profile_url');
+				if (!empty($edit_profile_url)) {
+					if (strstr($q, 'mode=profile_info')) {
+						return $edit_profile_url;
+					}
 
-		//these are custom links that are based on modules and thus no as easy to replace as register and lost password links in the hooks.php file so we'll just parse them
-		$edit_account_url = $this->params->get('edit_account_url');
-		if (strstr($q, 'mode=reg_details') && !empty($edit_account_url)) {
-			$url = $edit_account_url;
-			return 'href="' . $url . '"';
-		}
+					static $profile_mod_id;
+					if (empty($profile_mod_id)) {
+						//the first item listed in the profile module is the edit profile link so must rewrite it to go to signature instead
+						try {
+							$db = JFusionFactory::getDatabase($this->getJname());
 
-		$edit_profile_url = $this->params->get('edit_profile_url');
-		if (!empty($edit_profile_url)) {
-			if (strstr($q, 'mode=profile_info')) {
-				$url = $edit_profile_url;
-				return 'href="' . $url . '"';
-			}
+							$query = $db->getQuery(true)
+								->select('module_id')
+								->from('#__modules')
+								->where('module_langname = ' . $db->quote('UCP_PROFILE'));
 
-			static $profile_mod_id;
-			if (empty($profile_mod_id)) {
-				//the first item listed in the profile module is the edit profile link so must rewrite it to go to signature instead
-				try {
-					$db = JFusionFactory::getDatabase($this->getJname());
+							$db->setQuery($query);
+							$profile_mod_id = $db->loadResult();
+						} catch (Exception $e) {
+							JFusionFunction::raiseError($e, $this->getJname());
+							$profile_mod_id = null;
+						}
+					}
+					if (!empty($profile_mod_id) && strstr($q, 'i=' . $profile_mod_id)) {
+						$url = 'ucp.php?i=profile&mode=signature';
+						$url = JFusionFunction::routeURL($url, JFusionFactory::getApplication()->input->getInt('Itemid'), $this->getJname());
+						return $url;
+					}
+				}
 
-					$query = $db->getQuery(true)
-						->select('module_id')
-						->from('#__modules')
-						->where('module_langname = ' . $db->quote('UCP_PROFILE'));
-
-					$db->setQuery($query);
-					$profile_mod_id = $db->loadResult();
-				} catch (Exception $e) {
-					JFusionFunction::raiseError($e, $this->getJname());
-					$profile_mod_id = null;
+				$edit_avatar_url = $this->params->get('edit_avatar_url');
+				if (strstr($q, 'mode=avatar') && !empty($edit_avatar_url)) {
+					$url = $edit_avatar_url;
+				} else if (substr($baseURL, -1) != '/') {
+					//non-SEF mode
+					$q = str_replace('?', '&amp;', $q);
+					$url = $baseURL . '&amp;jfile=' . $q;
+				} else {
+					//check to see what SEF mode is selected
+					$sefmode = $this->params->get('sefmode');
+					if ($sefmode == 1) {
+						//extensive SEF parsing was selected
+						$url = JFusionFunction::routeURL($q, JFusionFactory::getApplication()->input->getInt('Itemid'));
+					} else {
+						//simple SEF mode, we can just combine both variables
+						$url = $baseURL . $q;
+					}
 				}
 			}
-			if (!empty($profile_mod_id) && strstr($q, 'i=' . $profile_mod_id)) {
-				$url = 'ucp.php?i=profile&mode=signature';
-				$url = JFusionFunction::routeURL($url, JFusionFactory::getApplication()->input->getInt('Itemid'), $this->getJname());
-				return 'href="' . $url . '"';
-			}
 		}
-
-		$edit_avatar_url = $this->params->get('edit_avatar_url');
-		if (strstr($q, 'mode=avatar') && !empty($edit_avatar_url)) {
-			$url = $edit_avatar_url;
-			return 'href="' . $url . '"';
-		}
-
-		if (substr($baseURL, -1) != '/') {
-			//non-SEF mode
-			$q = str_replace('?', '&amp;', $q);
-			$url = $baseURL . '&amp;jfile=' . $q;
-		} else {
-			//check to see what SEF mode is selected
-			$sefmode = $this->params->get('sefmode');
-			if ($sefmode == 1) {
-				//extensive SEF parsing was selected
-				$url = JFusionFunction::routeURL($q, JFusionFactory::getApplication()->input->getInt('Itemid'));
-			} else {
-				//simple SEF mode, we can just combine both variables
-				$url = $baseURL . $q;
-			}
-		}
-
-		return 'href="' . $url . '"';
+		return $url;
 	}
 
 	/**
@@ -615,7 +612,7 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			//non-SEF mode
 			$redirectURL = $baseURL . '&amp;jfile=' . $jfile;
 			if (!empty($query)) {
-				$redirectURL.= '&amp;' . $query;
+				$redirectURL .= '&amp;' . $query;
 			}
 		} else {
 			//check to see what SEF mode is selected
@@ -624,14 +621,14 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 				//extensive SEF parsing was selected
 				$redirectURL = $jfile;
 				if (!empty($query)) {
-					$redirectURL.= '?' . $query;
+					$redirectURL .= '?' . $query;
 				}
 				$redirectURL = JFusionFunction::routeURL($redirectURL, JFusionFactory::getApplication()->input->getInt('Itemid'));
 			} else {
 				//simple SEF mode, we can just combine both variables
 				$redirectURL = $baseURL . $jfile;
 				if (!empty($query)) {
-					$redirectURL.= '?' . $query;
+					$redirectURL .= '?' . $query;
 				}
 			}
 		}
@@ -669,9 +666,9 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			$jfile = basename($url_details['path']);
 			//set the correct action and close the form tag
 			$replacement = 'action="' . $baseURL . '"' . $extra . '>';
-			$replacement.= '<input type="hidden" name="jfile" value="' . $jfile . '"/>';
-			$replacement.= '<input type="hidden" name="Itemid" value="' . $Itemid . '"/>';
-			$replacement.= '<input type="hidden" name="option" value="com_jfusion"/>';
+			$replacement .= '<input type="hidden" name="jfile" value="' . $jfile . '"/>';
+			$replacement .= '<input type="hidden" name="Itemid" value="' . $Itemid . '"/>';
+			$replacement .= '<input type="hidden" name="option" value="com_jfusion"/>';
 		} else {
 			//check to see what SEF mode is selected
 			$sefmode = $this->params->get('sefmode');
@@ -704,7 +701,7 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 		//add any other variables
 		if (is_array($url_variables)) {
 			foreach ($url_variables as $key => $value) {
-				$replacement.= '<input type="hidden" name="' . $key . '" value="' . $value . '"/>';
+				$replacement .= '<input type="hidden" name="' . $key . '" value="' . $value . '"/>';
 			}
 		}
 		return $replacement;
@@ -723,19 +720,19 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 			$replace_header = array();
 			$callback_header = array();
 			//convert relative links into absolute links
-			$regex_header[] = '#(href="|src=")[\.\/]*(.*?")#mS';
+			$regex_header[] = '#(href="|src=")[\.\/].*?(.*?")#mS';
 			$replace_header[] = '$1' . $data->integratedURL . '$2';
 			$callback_header[] = '';
 			//fix for URL redirects
 			$regex_header[] = '#<meta http-equiv="refresh" content="(.*?)"(.*?)>#m';
-			$replace_header[] = ''; //$this->fixRedirect("$1","' . $data->baseURL . '")';
+			$replace_header[] = '';
 			$callback_header[] = 'fixRedirect';
 			//fix pm popup URL to be absolute for some phpBB templates
-			$regex_header[] = '#var url = \'[\.\/]*(.*?)\';#mS';
+			$regex_header[] = '#var url = \'[\.\/].*?(.*?)\';#mS';
 			$replace_header[] = 'var url = \'{$data->integratedURL}$1\';';
 			$callback_header[] = '';
 			//convert relative popup links to full url links
-			$regex_header[] = '#popup\(\'[\.\/]*(.*?)\'#mS';
+			$regex_header[] = '#popup\(\'[\.\/].*?(.*?)\'#mS';
 			$replace_header[] = 'popup(\'' . $data->integratedURL . '$1\'';
 			$callback_header[] = '';
 		}
@@ -923,5 +920,30 @@ class JFusionPublic_phpbb31 extends JFusionPublic
 	function getSearchResultLink($post) {
 		$forum = JFusionFactory::getForum($this->getJname());
 		return $forum->getPostURL($post->topic_id, $post->post_id);
+	}
+
+	/**
+	 * @param $buffer
+	 *
+	 * @return mixed|string
+	 */
+	function callback($buffer) {
+		$headers_list = headers_list();
+		foreach ($headers_list as $value) {
+			$matches = array();
+			if (stripos($value, 'location') === 0) {
+				if (preg_match('#' . preg_quote($this->data->integratedURL, '#') . '(.*?)\z#Sis', $value, $matches)) {
+					$matches[1] = './' . $matches[1];
+					header('Location: ' . $this->fixUrl($matches));
+				}
+			} else if (stripos($value, 'refresh') === 0) {
+				if (preg_match('#: (.*?) URL=' . preg_quote($this->data->integratedURL, '#') . '(.*?)\z#Sis', $value, $matches)) {
+					$time = $matches[1];
+					$matches[1] = $matches[2];
+					header('Refresh: ' . $time . ' URL=' . $this->fixUrl($matches));
+				}
+			}
+		}
+		return $buffer;
 	}
 }
