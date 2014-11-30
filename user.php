@@ -830,7 +830,6 @@ class JFusionUser_phpbb31 extends JFusionUser
 					$user->user_dateformat = $config['default_dateformat'];
 					$user->user_lang = $config['default_lang'];
 					$user->user_style = $config['default_style'];
-					$user->user_dst = $config['board_dst'];
 					$user->user_full_folder = - 4;
 					$user->user_notify_type = 0;
 					//generate a unique id
