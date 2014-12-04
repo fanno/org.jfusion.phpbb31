@@ -1,0 +1,3 @@
+#jfusion_extension_controller:
+#    pattern: /extension/{name}
+#    defaults: { _controller: jfusion.extension.controller:handle }

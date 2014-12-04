@@ -1,0 +1,91 @@
+<!-- INCLUDE overall_header.html -->
+
+<h1>{L_SETTINGS}</h1>
+
+<form id="acp_board" method="post" action="{U_ACTION}">
+	<fieldset>
+		<dl>
+			<dt>
+                <label for="jfusion_extension_redirect">{L_ACP_JFUSION_EXTENSION_REDIRECT}</label>
+            </dt>
+			<dd>
+                <input type="radio" class="radio" name="jfusion_extension_redirect" value="1" <!-- IF JFUSION_EXTENSION_REDIRECT -->checked="checked"<!-- ENDIF -->/> {L_YES} &nbsp;
+				<input type="radio" class="radio" name="jfusion_extension_redirect" value="0" <!-- IF not JFUSION_EXTENSION_REDIRECT -->checked="checked"<!-- ENDIF --> /> {L_NO}
+            </dd>
+		</dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_redirect_url">{L_ACP_JFUSION_EXTENSION_REDIRECT_URL}</label>
+            </dt>
+            <dd>
+                <input type="text" name="jfusion_extension_redirect_url" value="{JFUSION_EXTENSION_REDIRECT_URL}"/>
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_direct_access">{L_ACP_JFUSION_EXTENSION_DIRECT_ACCESS}</label>
+            </dt>
+            <dd>
+                <input type="radio" class="radio" name="jfusion_extension_direct_access" value="1" <!-- IF JFUSION_EXTENSION_DIRECT_ACCESS -->checked="checked"<!-- ENDIF -->/> {L_YES} &nbsp;
+                <input type="radio" class="radio" name="jfusion_extension_direct_access" value="0" <!-- IF not JFUSION_EXTENSION_DIRECT_ACCESS -->checked="checked"<!-- ENDIF --> /> {L_NO}
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_direct_access_groups">{L_ACP_JFUSION_EXTENSION_DIRECT_ACCESS_GROUPS}</label>
+            </dt>
+            <dd>
+                <input type="text" name="jfusion_extension_direct_access_groups" value="{JFUSION_EXTENSION_DIRECT_ACCESS_GROUPS}"/>
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_jname">{L_ACP_JFUSION_EXTENSION_JNAME}</label>
+            </dt>
+            <dd>
+                <input type="text" name="jfusion_extension_jname" value="{JFUSION_EXTENSION_JNAME}"/>
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_apipath">{L_ACP_JFUSION_EXTENSION_APIPATH}</label>
+            </dt>
+            <dd>
+                <input type="text" name="jfusion_extension_apipath" value="{JFUSION_EXTENSION_APIPATH}"/>
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_redirect_login">{L_ACP_JFUSION_EXTENSION_REDIRECT_LOGIN}</label>
+            </dt>
+            <dd>
+                <input type="radio" class="radio" name="jfusion_extension_redirect_login" value="1" <!-- IF JFUSION_EXTENSION_REDIRECT_LOGIN -->checked="checked"<!-- ENDIF -->/> {L_YES} &nbsp;
+                <input type="radio" class="radio" name="jfusion_extension_redirect_login" value="0" <!-- IF not JFUSION_EXTENSION_REDIRECT_LOGIN -->checked="checked"<!-- ENDIF --> /> {L_NO}
+            </dd>
+        </dl>
+
+        <dl>
+            <dt>
+                <label for="jfusion_extension_redirect_logout">{L_ACP_JFUSION_EXTENSION_REDIRECT_LOGOUT}</label>
+            </dt>
+            <dd>
+                <input type="radio" class="radio" name="jfusion_extension_redirect_logout" value="1" <!-- IF JFUSION_EXTENSION_REDIRECT_LOGOUT -->checked="checked"<!-- ENDIF -->/> {L_YES} &nbsp;
+                <input type="radio" class="radio" name="jfusion_extension_redirect_logout" value="0" <!-- IF not JFUSION_EXTENSION_REDIRECT_LOGOUT -->checked="checked"<!-- ENDIF --> /> {L_NO}
+            </dd>
+        </dl>
+
+		<p class="submit-buttons">
+			<input class="button1" type="submit" id="submit" name="submit" value="{L_SUBMIT}" />&nbsp;
+			<input class="button2" type="reset" id="reset" name="reset" value="{L_RESET}" />
+		</p>
+
+		{S_FORM_TOKEN}
+	</fieldset>
+</form>
+<!-- INCLUDE overall_footer.html -->
