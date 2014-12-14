@@ -422,7 +422,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 						    $query = $db->getQuery(true)
 							    ->select('group_id')
 							    ->from('#__user_group')
-							    ->where('user_id = ' . $userid);
+							    ->where('user_id = ' . (int) $userid);
 
 						    $db->setQuery($query);
 						    $groupids = $db->loadColumn();
@@ -430,7 +430,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 						    $query = $db->getQuery(true)
 							    ->select('user_type')
 							    ->from('#__users')
-							    ->where('user_id = ' . $userid);
+							    ->where('user_id = ' . (int) $userid);
 
 						    $db->setQuery($query);
 						    $usertype = (int) $db->loadResult();
@@ -532,7 +532,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 				    $query = $db->getQuery(true)
 					    ->select('*')
 					    ->from('#__acl_users')
-					    ->where('user_id = ' . $userid)
+					    ->where('user_id = ' . (int) $userid)
 					    ->where('auth_option_id IN (' . implode(', ', $auth_option_ids) . ')')
 					    ->where('forum_id IN (' . implode(', ', $forumids) . ')');
 
@@ -639,7 +639,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 		    $query = $db->getQuery(true)
 			    ->select('topic_id AS threadid, forum_id AS forumid, topic_first_post_id AS postid')
 			    ->from('#__topics')
-			    ->where('topic_id = ' . $threadid);
+			    ->where('topic_id = ' . (int) $threadid);
 
 		    $db->setQuery($query);
 		    $result = $db->loadObject();
@@ -675,10 +675,10 @@ class JFusionForum_phpbb31 extends JFusionForum
 			$query = $db->getQuery(true)
 				->select('username, username_clean, user_colour, user_permissions')
 				->from('#__users')
-				->where('user_id = ' . $userid);
+				->where('user_id = ' . (int) $userid);
 
 			$db->setQuery($query);
-			$phpbbUser = $db->loadObject();
+			$user = $db->loadObject();
 
 			if ($dbparams->get('use_content_created_date', false)) {
 				$timezone = JFusionFactory::getConfig()->get('offset');
@@ -689,101 +689,98 @@ class JFusionForum_phpbb31 extends JFusionForum
 				$timestamp = time();
 			}
 
-			$topic_row = new stdClass();
-			$topic_row->topic_poster = $userid;
-			$topic_row->topic_time = $timestamp;
-			$topic_row->forum_id = $forumid;
-			$topic_row->icon_id = false;
-			$topic_row->topic_visibility = 1;
-			$topic_row->topic_title = $subject;
-			$topic_row->topic_first_poster_name	= $phpbbUser->username;
-			$topic_row->topic_first_poster_colour = $phpbbUser->user_colour;
-			$topic_row->topic_type = 0;
-			$topic_row->topic_time_limit = 0;
-			$topic_row->topic_attachment = 0;
+			$topic = new stdClass();
+			$topic->topic_poster = (int) $userid;
+			$topic->topic_time = $timestamp;
+			$topic->forum_id = $forumid;
+			$topic->icon_id = false;
+			$topic->topic_visibility = 1;
+			$topic->topic_title = $subject;
+			$topic->topic_first_poster_name	= $user->username;
+			$topic->topic_first_poster_colour = $user->user_colour;
+			$topic->topic_type = 0;
+			$topic->topic_time_limit = 0;
+			$topic->topic_attachment = 0;
 
-			$db->insertObject('#__topics', $topic_row, 'topic_id' );
-
-			$topicid = $db->insertid();
+			$db->insertObject('#__topics', $topic, 'topic_id' );
 
 			$bbcode = $this->helper->bbcode_parser($text);
 
-			$post_row = new stdClass();
-			$post_row->forum_id			= $forumid;
-			$post_row->topic_id 		= $topicid;
-			$post_row->poster_id		= $userid;
-			$post_row->icon_id			= 0;
-			$post_row->poster_ip		= $_SERVER['REMOTE_ADDR'];
-			$post_row->post_time		= $timestamp;
-			$post_row->post_visibility	= 1;
-			$post_row->enable_bbcode	= 1;
-			$post_row->enable_smilies	= 1;
-			$post_row->enable_magic_url	= 1;
-			$post_row->enable_sig		= 1;
-			$post_row->post_username	= $phpbbUser->username;
-			$post_row->post_subject		= $subject;
-			$post_row->post_text		= $bbcode->text;
-			$post_row->post_checksum	= md5($bbcode->text);
-			$post_row->post_attachment	= 0;
-			$post_row->bbcode_bitfield	= $bbcode->bbcode_bitfield;
-			$post_row->bbcode_uid		= $bbcode->bbcode_uid;
-			$post_row->post_postcount	= 1;
-			$post_row->post_edit_locked	= 0;
+			$post = new stdClass();
+			$post->forum_id			= (int) $forumid;
+			$post->topic_id 		= (int) $topic->topic_id;
+			$post->poster_id		= (int) $userid;
+			$post->icon_id			= 0;
+			$post->poster_ip		= $_SERVER['REMOTE_ADDR'];
+			$post->post_time		= (int) $timestamp;
+			$post->post_visibility	= 1;
+			$post->enable_bbcode	= 1;
+			$post->enable_smilies	= 1;
+			$post->enable_magic_url	= 1;
+			$post->enable_sig		= 1;
+			$post->post_username	= $user->username;
+			$post->post_subject		= $subject;
+			$post->post_text		= $bbcode->text;
+			$post->post_checksum	= md5($bbcode->text);
+			$post->post_attachment	= 0;
+			$post->bbcode_bitfield	= $bbcode->bbcode_bitfield;
+			$post->bbcode_uid		= $bbcode->bbcode_uid;
+			$post->post_postcount	= 1;
+			$post->post_edit_locked	= 0;
 
-			$db->insertObject('#__posts', $post_row, 'post_id');
+			$db->insertObject('#__posts', $post, 'post_id');
 
-			$postid = $db->insertid();
+			$topic->topic_first_post_id			= $post->post_id;
+			$topic->topic_last_post_id			= $post->post_id;
+			$topic->topic_last_post_time		= (int) $timestamp;
+			$topic->topic_last_poster_id		= (int) $userid;
+			$topic->topic_last_poster_name		= $user->username;
+			$topic->topic_last_poster_colour	= $user->user_colour;
+			$topic->topic_last_post_subject		= (string) $subject;
 
-			$topic_row = new stdClass();
-			$topic_row->topic_first_post_id			= $postid;
-			$topic_row->topic_last_post_id			= $postid;
-			$topic_row->topic_last_post_time		= $timestamp;
-			$topic_row->topic_last_poster_id		= (int) $userid;
-			$topic_row->topic_last_poster_name		= $phpbbUser->username;
-			$topic_row->topic_last_poster_colour	= $phpbbUser->user_colour;
-			$topic_row->topic_last_post_subject		= (string) $subject;
-			$topic_row->topic_id					= $topicid;
-
-			$db->updateObject('#__topics', $topic_row, 'topic_id' );
-
-			$query = $db->getQuery(true)
-				->select('forum_last_post_time, forum_topics, forum_topics_real, forum_posts')
-				->from('#__forums')
-				->where('forum_id = ' . $forumid);
-
-			$db->setQuery($query);
-			$num = $db->loadObject();
-
-			$forum_stats = new stdClass();
+			$db->updateObject('#__topics', $topic, 'topic_id' );
 
 			if ($dbparams->get('use_content_created_date', false)) {
+				$query = $db->getQuery(true)
+					->select('forum_last_post_time')
+					->from('#__forums')
+					->where('forum_id = ' . (int) $forumid);
+
+				$db->setQuery($query);
+				$forum_last_post_time = $db->loadResult();
+
 				//only update the last post for the topic if it really is newer
-				$updateLastPost = ($timestamp > $num->forum_last_post_time) ? true : false;
+				$updateLastPost = ($timestamp > $forum_last_post_time) ? true : false;
 			} else {
 				$updateLastPost = true;
 			}
 
+			$query = $db->getQuery(true)
+				->update('#__forums');
+
 			if($updateLastPost) {
-				$forum_stats->forum_last_post_id 		=  $postid;
-				$forum_stats->forum_last_post_subject	= $db->quote($subject);
-				$forum_stats->forum_last_post_time 		=  $timestamp;
-				$forum_stats->forum_last_poster_id 		=  (int) $userid;
-				$forum_stats->forum_last_poster_name 	=  $phpbbUser->username;
-				$forum_stats->forum_last_poster_colour 	= $phpbbUser->user_colour;
+				$query->set('forum_last_post_id = ' . $db->quote($post->post_id))
+					->set('forum_last_post_subject = ' . $db->quote($subject))
+					->set('forum_last_post_time = ' . (int) $timestamp)
+					->set('forum_last_poster_id = ' . (int) $userid)
+					->set('forum_last_poster_name = ' . $db->quote($user->username))
+					->set('forum_last_poster_colour = ' . $db->quote($user->user_colour));
 			}
 
-			$forum_stats->forum_id 			= $forumid;
-			$forum_stats->forum_topics 		= $num->forum_topics + 1;
-			$forum_stats->forum_topics_real = $num->forum_topics_real + 1;
-			$forum_stats->forum_posts 		= $num->forum_posts + 1;
+			//update some stats
+			$query = $db->getQuery(true)
+				->set('forum_posts_approved = forum_posts_approved + 1')
+				->set('forum_topics_approved = forum_topics_approved + 1')
+				->where('forum_id  = ' . $db->quote($forumid));
 
-			$db->updateObject('#__forums', $forum_stats, 'forum_id' );
+			$db->setQuery($query);
+			$db->execute();
 
 			//update some stats
 			$query = $db->getQuery(true)
 				->update('#__users')
 				->set('user_posts = user_posts + 1')
-				->where('user_id  = ' . $userid);
+				->where('user_id  = ' . (int) $userid);
 
 			$db->setQuery($query);
 			$db->execute();
@@ -796,11 +793,11 @@ class JFusionForum_phpbb31 extends JFusionForum
 			$db->setQuery($query);
 			$db->execute();
 
-			if(!empty($topicid) && !empty($postid)) {
+			if(!empty($topic->topic_id) && !empty($post->post_id)) {
 				//add information to update forum lookup
 				$status['threadinfo']->forumid = $forumid;
-				$status['threadinfo']->threadid = $topicid;
-				$status['threadinfo']->postid = $postid;
+				$status['threadinfo']->threadid = $topic->topic_id;
+				$status['threadinfo']->postid = $post->post_id;
 			}
 		} catch (Exception $e) {
 			$status['error'] = $e->getMessage();
@@ -843,7 +840,6 @@ class JFusionForum_phpbb31 extends JFusionForum
 			$bbcode = $this->helper->bbcode_parser($text);
 
 			$timestamp = $dbparams->get('use_content_created_date', false) ? JFusionFactory::getDate($contentitem->created)->toUnix() : time();
-			$userid = $dbparams->get('default_user');
 
 			$query = $db->getQuery(true)
 				->select('post_edit_count')
@@ -853,17 +849,17 @@ class JFusionForum_phpbb31 extends JFusionForum
 			$db->setQuery($query);
 			$count = $db->loadResult();
 
-			$post_row = new stdClass();
-			$post_row->post_subject		= $subject;
-			$post_row->post_text		= $bbcode->text;
-			$post_row->post_checksum	= md5($bbcode->text);
-			$post_row->bbcode_bitfield	= $bbcode->bbcode_bitfield;
-			$post_row->bbcode_uid		= $bbcode->bbcode_uid;
-			$post_row->post_edit_time 	= $timestamp;
-			$post_row->post_edit_user	= $userid;
-			$post_row->post_edit_count	= $count + 1;
-			$post_row->post_id 			= $postid;
-			$db->updateObject('#__posts', $post_row, 'post_id');
+			$post = new stdClass();
+			$post->post_subject		= $subject;
+			$post->post_text		= $bbcode->text;
+			$post->post_checksum	= md5($bbcode->text);
+			$post->bbcode_bitfield	= $bbcode->bbcode_bitfield;
+			$post->bbcode_uid		= $bbcode->bbcode_uid;
+			$post->post_edit_time 	= $timestamp;
+			$post->post_edit_user	= $dbparams->get('default_user');
+			$post->post_edit_count	= $count + 1;
+			$post->post_id 			= $postid;
+			$db->updateObject('#__posts', $post, 'post_id');
 
 			//update the thread title
 			$query = $db->getQuery(true)
@@ -899,7 +895,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 				$userinfo->userid = 1;
 
 				if(empty($userinfo->username)) {
-					throw new RuntimeException(JTEXT::_('GUEST_FIELDS_MISSING'));
+					throw new RuntimeException(JText::_('GUEST_FIELDS_MISSING'));
 				} else {
 					$user = JFusionFactory::getUser($this->getJname());
 					$username_clean = $user->filterUsername($userinfo->username);
@@ -916,12 +912,11 @@ class JFusionForum_phpbb31 extends JFusionForum
 					$db->setQuery($query);
 					$result = $db->loadResult();
 					if(!empty($result)) {
-						throw new RuntimeException(JTEXT::_('USERNAME_IN_USE'));
+						throw new RuntimeException(JText::_('USERNAME_IN_USE'));
 					}
 				}
 			}
 			//setup some variables
-			$userid = $userinfo->userid;
 			$public = JFusionFactory::getPublic($this->getJname());
 			//strip out html from post
 			$text = strip_tags($postinfo->text);
@@ -934,107 +929,95 @@ class JFusionForum_phpbb31 extends JFusionForum
 
 				//get some topic information
 				$query = $db->getQuery(true)
-					->select('topic_title, topic_replies, topic_replies_real')
+					->select('topic_title, topic_posts_approved, topic_posts_unapproved')
 					->from('#__topics')
 					->where('topic_id = ' . $ids->threadid);
 
 				$db->setQuery($query);
-				$topic = $db->loadObject();
+				$exsistingTopic = $db->loadObject();
 				//the user information
 
 				$query = $db->getQuery(true)
 					->select('username, user_colour, user_permissions')
 					->from('#__users')
-					->where('user_id = ' . $userid);
+					->where('user_id = ' . (int) $userinfo->userid);
 
 				$db->setQuery($query);
-				$phpbbUser = $db->loadObject();
+				$user = $db->loadObject();
 
 				if($userinfo->guest && !empty($userinfo->username)) {
-					$phpbbUser->username = $userinfo->username;
+					$user->username = $userinfo->username;
 				}
 
 				$timestamp = time();
 
 				$post_visibility = ($userinfo->guest && $params->get('moderate_guests', 1)) ? 0 : 1;
 
-				$post_row = new stdClass();
-				$post_row->forum_id			= $ids->forumid;
-				$post_row->topic_id 		= $ids->threadid;
-				$post_row->poster_id		= $userid;
-				$post_row->icon_id			= 0;
-				$post_row->poster_ip		= $_SERVER['REMOTE_ADDR'];
-				$post_row->post_time		= $timestamp;
-				$post_row->post_visibility	= $post_visibility;
-				$post_row->enable_bbcode	= 1;
-				$post_row->enable_smilies	= 1;
-				$post_row->enable_magic_url	= 1;
-				$post_row->enable_sig		= 1;
-				$post_row->post_username	= $phpbbUser->username;
-				$post_row->post_subject		= 'Re: ' . $topic->topic_title;
-				$post_row->post_text		= $bbcode->text;
-				$post_row->post_checksum	= md5($bbcode->text);
-				$post_row->post_attachment	= 0;
-				$post_row->bbcode_bitfield	= $bbcode->bbcode_bitfield;
-				$post_row->bbcode_uid		= $bbcode->bbcode_uid;
-				$post_row->post_postcount	= 1;
-				$post_row->post_edit_locked	= 0;
+				$post = new stdClass();
+				$post->forum_id			= $ids->forumid;
+				$post->topic_id 		= $ids->threadid;
+				$post->poster_id		= (int) $userinfo->userid;
+				$post->icon_id			= 0;
+				$post->poster_ip		= $_SERVER['REMOTE_ADDR'];
+				$post->post_time		= $timestamp;
+				$post->post_visibility	= $post_visibility;
+				$post->enable_bbcode	= 1;
+				$post->enable_smilies	= 1;
+				$post->enable_magic_url	= 1;
+				$post->enable_sig		= 1;
+				$post->post_username	= $user->username;
+				$post->post_subject		= 'Re: ' . $exsistingTopic->topic_title;
+				$post->post_text		= $bbcode->text;
+				$post->post_checksum	= md5($bbcode->text);
+				$post->post_attachment	= 0;
+				$post->bbcode_bitfield	= $bbcode->bbcode_bitfield;
+				$post->bbcode_uid		= $bbcode->bbcode_uid;
+				$post->post_postcount	= 1;
+				$post->post_edit_locked	= 0;
 
-				$db->insertObject('#__posts', $post_row, 'post_id');
+				$db->insertObject('#__posts', $post, 'post_id');
 
-				$postid = $db->insertid();
 				//store the postid
-				$status['postid'] = $postid;
+				$status['postid'] = $post->post_id;
+
+				$query = $db->getQuery(true)
+					->select('forum_topics_approved, forum_posts_approved, forum_topics_unapproved, forum_posts_unapproved')
+					->from('#__forums')
+					->where('forum_id = ' . $ids->forumid);
+
+				$db->setQuery($query);
+				$num = $db->loadObject();
+
+				$forum = new stdClass();
+				$forum->forum_last_post_id 		    = $post->post_id;
+				$forum->forum_last_post_subject	    = '';
+				$forum->forum_last_post_time 		= $timestamp;
+				$forum->forum_last_poster_id 		= (int) $userinfo->userid;
+				$forum->forum_last_poster_name 	    = $user->username;
+				$forum->forum_last_poster_colour    = $user->user_colour;
+				$forum->forum_id 					= $ids->forumid;
 
 				//only update the counters if the post is approved
 				if($post_visibility) {
-					$topic_row = new stdClass();
-					$topic_row->topic_last_post_id			= $postid;
-					$topic_row->topic_last_post_time		= $timestamp;
-					$topic_row->topic_last_poster_id		= (int) $userid;
-					$topic_row->topic_last_poster_name		= $phpbbUser->username;
-					$topic_row->topic_last_poster_colour	= $phpbbUser->user_colour;
-					$topic_row->topic_last_post_subject     = 'Re: ' . $topic->topic_title;
-					$topic_row->topic_replies				= $topic->topic_replies + 1;
-					$topic_row->topic_replies_real 			= $topic->topic_replies_real + 1;
-					$topic_row->topic_id					= $ids->threadid;
-					$db->updateObject('#__topics', $topic_row, 'topic_id' );
+					$topic = new stdClass();
+					$topic->topic_last_post_id			= $post->post_id;
+					$topic->topic_last_post_time		= $timestamp;
+					$topic->topic_last_poster_id		= (int) $userinfo->userid;
+					$topic->topic_last_poster_name		= $user->username;
+					$topic->topic_last_poster_colour	= $user->user_colour;
+					$topic->topic_last_post_subject     = 'Re: ' . $exsistingTopic->topic_title;
+					$topic->topic_posts_approved		= $exsistingTopic->topic_posts_approved + 1;
+					$topic->topic_id					= $ids->threadid;
+					$db->updateObject('#__topics', $topic, 'topic_id' );
 
-					$query = $db->getQuery(true)
-						->select('forum_posts')
-						->from('#__forums')
-						->where('forum_id = ' . $ids->forumid);
-
-					$db->setQuery($query);
-					$num = $db->loadObject();
-
-					$forum_stats = new stdClass();
-					$forum_stats->forum_last_post_id 		= $postid;
-					$forum_stats->forum_last_post_subject	= '';
-					$forum_stats->forum_last_post_time 		= $timestamp;
-					$forum_stats->forum_last_poster_id 		= (int) $userid;
-					$forum_stats->forum_last_poster_name 	= $phpbbUser->username;
-					$forum_stats->forum_last_poster_colour 	= $phpbbUser->user_colour;
-					$forum_stats->forum_posts				= $num->forum_posts + 1;
-					$forum_stats->forum_id 					= $ids->forumid;
-
-					$query = $db->getQuery(true)
-						->select('forum_topics, forum_topics_real, forum_posts')
-						->from('#__forums')
-						->where('forum_id = ' . $ids->forumid);
-
-					$db->setQuery($query);
-					$num = $db->loadObject();
-					$forum_stats->forum_topics = $num->forum_topics + 1;
-					$forum_stats->forum_topics_real = $num->forum_topics_real + 1;
-					$forum_stats->forum_posts = $num->forum_posts + 1;
-					$db->updateObject('#__forums', $forum_stats, 'forum_id' );
+					$forum->forum_posts_approved = $num->forum_posts_approved + 1;
+					$forum->forum_topics_approved = $num->forum_topics_approved + 1;
 
 					//update some stats
 					$query = $db->getQuery(true)
 						->update('#__users')
 						->set('user_posts = user_posts + 1')
-						->where('user_id = ' . $userid);
+						->where('user_id = ' . (int) $userinfo->userid);
 
 					$db->setQuery($query);
 					$db->execute();
@@ -1047,12 +1030,16 @@ class JFusionForum_phpbb31 extends JFusionForum
 					$db->setQuery($query);
 					$db->execute();
 				} else {
-					//update the for real count so that phpbb notes there are unapproved messages here
-					$topic_row = new stdClass();
-					$topic_row->topic_replies_real 			= $topic->topic_replies_real + 1;
-					$topic_row->topic_id					= $ids->threadid;
-					$db->updateObject('#__topics', $topic_row, 'topic_id' );
+					$forum->forum_posts_unapproved  = $num->forum_posts_unapproved + 1;
+					$forum->forum_topics_unapproved = $num->forum_topics_unapproved + 1;
+
+					$query = $db->getQuery(true)
+						->update('#__topics')
+						->set('topic_posts_unapproved = topic_posts_unapproved + 1')
+						->where('topic_id = ' . (int) $ids->threadid);
 				}
+
+				$db->updateObject('#__forums', $forum, 'forum_id' );
 
 				//update moderation status to tell discussion bot to notify user
 				$status['post_moderated'] = ($post_visibility) ? 0 : 1;
