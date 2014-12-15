@@ -768,8 +768,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 			}
 
 			//update some stats
-			$query = $db->getQuery(true)
-				->set('forum_posts_approved = forum_posts_approved + 1')
+			$query->set('forum_posts_approved = forum_posts_approved + 1')
 				->set('forum_topics_approved = forum_topics_approved + 1')
 				->where('forum_id  = ' . $db->quote($forumid));
 
@@ -1037,6 +1036,9 @@ class JFusionForum_phpbb31 extends JFusionForum
 						->update('#__topics')
 						->set('topic_posts_unapproved = topic_posts_unapproved + 1')
 						->where('topic_id = ' . (int) $ids->threadid);
+
+					$db->setQuery($query);
+					$db->execute();
 				}
 
 				$db->updateObject('#__forums', $forum, 'forum_id' );
