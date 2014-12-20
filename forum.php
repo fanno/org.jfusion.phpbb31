@@ -737,6 +737,7 @@ class JFusionForum_phpbb31 extends JFusionForum
 			$topic->topic_last_poster_name		= $user->username;
 			$topic->topic_last_poster_colour	= $user->user_colour;
 			$topic->topic_last_post_subject		= (string) $subject;
+			$topic->topic_posts_approved = 1;
 
 			$db->updateObject('#__topics', $topic, 'topic_id' );
 
